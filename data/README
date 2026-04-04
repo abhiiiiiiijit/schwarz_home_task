@@ -1,0 +1,21 @@
+Running the `generate_data.py` script will create a randomized
+basket/product dataset in the same format as the `data_example.csv.gz
+file.
+
+
+Parameter:
+  `scale`: determines the scale of the generated data.
+
+```python generate_data.py --scale 1```
+
+Will generate a file called `data_1.csv.gz` (about 2 MB) in the
+current directory.
+
+
+
+Data format:
+  - Gzipped CSV file with delimiter `,`.
+  - Two columns `basket_id`, `product_id` (no header).
+  - Data types:
+    - `basket_id` is a version 4 UUID.
+    - `product_id` is an integer.
