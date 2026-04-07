@@ -28,23 +28,23 @@ tests/
 
 ```bash
 # 1. Generate test data
-python generate_data.py --scale 1          # creates data_1.csv.gz
+python3 generate_data.py --scale 1          # creates data_1.csv.gz
 
 # 2. Run the full pipeline (split → compute → preview)
-python run_assignment1.py data_1.csv.gz
+python3 run_assignment1.py data_1.csv.gz
 
 # Optional: tune shard count and output path
-python run_assignment1.py data_1.csv.gz --shards 32 --output result.csv.gz
+python3 run_assignment1.py data_1.csv.gz --shards 32 --output result.csv.gz
 
 # Or run each step individually:
-python split.py data_1.csv.gz --shards 16 --output-dir shards/
-python cooccurrence.py --shard-dir shards/ --output cooccurrences.csv.gz
+python3 split.py data_1.csv.gz --shards 16 --output-dir shards/
+python3 cooccurrence.py --shard-dir shards/ --output cooccurrences.csv.gz
 ```
 
 **Low-memory testing** (simulate the memory constraint):
 
 ```bash
-python -Xmx64m run_assignment1.py data_1.csv.gz
+python3 -Xmx64m run_assignment1.py data_1.csv.gz
 ```
 
 ### Why it computes the correct result
@@ -94,16 +94,16 @@ the dict stays small relative to any realistic memory cap.
 
 ```bash
 # Scales 1–3 with pairs (k=2) – takes ~1-2 min
-python benchmark.py --scales 1 2 3 --shards 16
+python3 benchmark.py --scales 1 2 3 --shards 16
 
 # Add scale 4 and 5 for more data points (takes longer)
-python benchmark.py --scales 1 2 3 4 5 --shards 16
+python3 benchmark.py --scales 1 2 3 4 5 --shards 16
 
 # Measure triples (k=3) instead
-python benchmark.py --scales 1 2 3 --k 3
+python3 benchmark.py --scales 1 2 3 --k 3
 
 # Skip the skew analysis and only measure runtime
-python benchmark.py --scales 1 2 3 --skip-skew
+python3 benchmark.py --scales 1 2 3 --skip-skew
 ```
 
 **Expected output (example):**
@@ -139,7 +139,7 @@ never becomes the bottleneck.
 
 **Would the algorithm still work if some combinations are much more common?**
 
-**Yes, completely.**  The count for a pair is simply an integer in a Python
+**Yes, completely.**  The count for a pair is simply an integer in a python3
 dict.  A pair that appears in every basket just accumulates a large integer
 for that key — the data structure, the shard routing, and the per-basket
 grouping are all unaffected by the magnitude of individual counts.
@@ -169,11 +169,11 @@ implemented in `k_cooccurrence.py`, which accepts a `--k` argument:
 
 ```bash
 # Compute triples after splitting
-python split.py data_1.csv.gz --shards 16 --output-dir shards/
-python k_cooccurrence.py --shard-dir shards/ --k 3 --output triples.csv.gz
+python3 split.py data_1.csv.gz --shards 16 --output-dir shards/
+python3 k_cooccurrence.py --shard-dir shards/ --k 3 --output triples.csv.gz
 
 # Or via the benchmark
-python benchmark.py --scales 1 2 3 --k 3
+python3 benchmark.py --scales 1 2 3 --k 3
 ```
 
 **Memory impact**: The number of possible triples is `C(P,3)` vs `C(P,2)`
@@ -201,10 +201,10 @@ pip install pytest
 pytest tests/test_assignment1.py -v
 
 # Without pytest – stdlib unittest only, zero extra dependencies:
-python -m unittest tests.test_assignment1 -v
+python3 -m unittest tests.test_assignment1 -v
 
 # From inside the tests/ directory:
-python -m unittest test_assignment1 -v
+python3 -m unittest test_assignment1 -v
 ```
 
 ### Test coverage (50 tests)
@@ -221,7 +221,7 @@ python -m unittest test_assignment1 -v
 | `TestSkewedData` (4) | Dominant pair correct, full correctness under skew, extreme skew (one pair only), rare pairs alongside dominant |
 | `TestEndToEnd` (5) | More shards than baskets, single shard, k=2 vs k=3 consistency, 1 000-basket stress test, gzip input |
 
-All tests use only the Python standard library (`unittest`, `csv`, `gzip`,
+All tests use only the python3 standard library (`unittest`, `csv`, `gzip`,
 `tempfile`, `itertools`, `random`, `collections`).  No network access, no
 `pip install` required beyond pytest itself (which is optional).
 
@@ -233,11 +233,11 @@ All tests use only the Python standard library (`unittest`, `csv`, `gzip`,
 
 ```bash
 # 1. Generate two data files
-python generate_data.py --scale 1
+python3 generate_data.py --scale 1
 cp data_1.csv.gz data_1b.csv.gz
 
 # 2. Introduce duplicates and stage them in incoming/
-python introduce_duplicates.py data_1.csv.gz data_1b.csv.gz \
+python3 introduce_duplicates.py data_1.csv.gz data_1b.csv.gz \
     --dup-ratio 0.15 --output-dir incoming/
 
 # 3. First incremental run
@@ -246,9 +246,9 @@ spark-submit incremental_ingest.py \
     --output-dir warehouse/sales_dedup/
 
 # 4. Generate a third file and run again (incremental step)
-python generate_data.py --scale 1
+python3 generate_data.py --scale 1
 mv data_1.csv.gz data_2.csv.gz
-python introduce_duplicates.py data_2.csv.gz --output-dir incoming/
+python3 introduce_duplicates.py data_2.csv.gz --output-dir incoming/
 
 spark-submit incremental_ingest.py \
     --input-dir incoming/ \
