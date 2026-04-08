@@ -106,34 +106,7 @@ python3 benchmark.py --scales 1 2 3 --k 3
 python3 benchmark.py --scales 1 2 3 --skip-skew
 ```
 
-**Expected output (example):**
 
-```
- scale        rows  t_gen(s)  t_split(s)  t_cooc(s)  t_total(s)       pairs
---------------------------------------------------------------------------------
-     1      327,680     5.12        4.88       1.34       11.34      13,024
-     2      655,360    10.31        9.74       2.71       22.76      13,876
-     3      983,040    15.48       14.61       4.09       34.18      14,102
-
-Scaling ratios (t_total[i+1] / t_total[i])  — expect ~2.0 for linear:
-  scale 1 → 2: 2.01x
-  scale 2 → 3: 1.50x
-```
-
-**Does it behave as expected?**
-
-Yes. The algorithm is *O(R)* in the total number of input rows R.  The
-data generator creates `R = scale × 2¹⁶` basket-rows, so doubling the
-scale doubles R and the runtime grows roughly linearly (ratio ≈ 2.0 on
-consecutive scales).  The sorting step inside each basket is O(P log P)
-with P ≤ 5, which is effectively constant, so it does not change the
-asymptotic behaviour.
-
-The pair-count dict size grows more slowly than R.  Because baskets are
-small and products are sampled randomly, the set of observed pairs
-saturates quickly as scale increases — the number of distinct pairs barely
-grows beyond scale 1 (see the `pairs` column), confirming that the dict
-never becomes the bottleneck.
 
 ### Skewed co-occurrence counts
 
@@ -176,18 +149,6 @@ python3 k_cooccurrence.py --shard-dir shards/ --k 3 --output triples.csv.gz
 python3 benchmark.py --scales 1 2 3 --k 3
 ```
 
-**Memory impact**: The number of possible triples is `C(P,3)` vs `C(P,2)`
-for pairs.  For scale=1 (P=256): pairs = 32 640, triples = 2 730 240 —
-about 84× more.  For scale=10 (P=2560): triples ≈ 2.8 billion potential
-keys, though only a tiny fraction co-occur (baskets have at most 5
-products, so at most C(5,3)=10 triples each).  In practice the dict
-remains manageable for k=3.  For k=4 or k=5 with large P, the partial-
-result-to-disk pattern from the productionisation section should be applied.
-
-**Runtime impact**: Each basket with 5 products contributes C(5,3)=10
-triples vs C(5,2)=10 pairs — the same number in this case, so the runtime
-ratio for k=3 vs k=2 is ≈1 at the basket level.  What grows is the dict,
-not the per-row processing.
 
 ---
 
@@ -269,14 +230,12 @@ Parquet table before deduplication.
   Delta Lake, Iceberg, and virtually every modern data platform.
 - **Compression**: Snappy by default (good speed/size balance).
 
-### Why deduplication is correct
+### Why Deduplication is Correct
 
-`dropDuplicates(["basket_id", "product_id"])` keeps exactly one row for
-every distinct `(basket_id, product_id)` pair across the union of existing
-data and new incoming data.
+Deduplication is implemented using a window-function strategy that keeps the **most recent record** for each `(basket_id, product_id)` pair based on the ingestion timestamp.
 
-- Records that appear in multiple files are not duplicated → ✓ (union + dropDuplicates)
-- Previously ingested records are not deleted → ✓ (existing Parquet is always included in the union before the overwrite)
+For every `(basket_id, product_id)` group, records are ordered by **`ingestion_date` in descending order**, and only the **latest record** is retained. This ensures that when the same record appears multiple times across different files or ingestion runs, the newest version replaces the older ones.
+
 
 ### How to productionise
 
