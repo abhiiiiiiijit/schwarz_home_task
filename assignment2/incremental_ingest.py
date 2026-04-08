@@ -47,6 +47,7 @@ try:
     from pyspark.sql import SparkSession
     from pyspark.sql import functions as F
     from pyspark.sql.types import StructType, StructField, StringType
+    from pyspark.sql.window import Window
 except ImportError:
     sys.exit(
         "PySpark is not installed.  Install it with:\n"
@@ -98,7 +99,7 @@ def find_new_files(input_dir: str, already_processed: set) -> list:
 # Main ingestion logic
 # ---------------------------------------------------------------------------
 
-def ingest(input_dir: str, output_dir: str, processed_log: str) -> None:
+def ingest(input_dir: str, output_dir: str, processed_log: str, ingested_by: str) -> None:
     already_processed = load_processed_log(processed_log)
     new_files = find_new_files(input_dir, already_processed)
 
@@ -125,19 +126,34 @@ def ingest(input_dir: str, output_dir: str, processed_log: str) -> None:
         .option("header", "false")
         .schema(SCHEMA)
         .csv(new_files)
+        .withColumn("source_file", F.input_file_name())
+        .withColumn("ingested_at", F.current_timestamp())
+        .withColumn("ingested_by", F.lit(ingested_by))
     )
 
     # 2. Load existing deduplicated data (if any)
     if os.path.exists(output_dir) and os.listdir(output_dir):
-        existing_df = spark.read.schema(SCHEMA).parquet(output_dir).cache()
+        existing_df = spark.read.schema(incoming_df.schema).parquet(output_dir).cache()
         existing_df.count()
     else:
         # Empty DataFrame with the same schema
-        existing_df = spark.createDataFrame([], SCHEMA)
+        existing_df = spark.createDataFrame([], incoming_df.schema)
 
     # 3. Union and deduplicate
-    combined_df = existing_df.union(incoming_df)
-    deduped_df  = combined_df.dropDuplicates(["basket_id", "product_id"])
+    combined_df = existing_df.unionByName(incoming_df)
+    #deduped_df  = combined_df.dropDuplicates(["basket_id", "product_id"])
+    window = (
+        Window
+        .partitionBy("basket_id", "product_id")
+        .orderBy(F.col("ingested_at").desc())
+    )
+
+    deduped_df = (
+        combined_df
+        .withColumn("rn", F.row_number().over(window))
+        .filter("rn = 1")
+        .drop("rn")
+    )
 
     # 4. Overwrite the output table
     (
@@ -177,5 +193,8 @@ if __name__ == "__main__":
         "--processed-log", default="processed_files.txt",
         help="File tracking already-ingested paths (default: processed_files.txt)."
     )
+    parser.add_argument(
+        "--ingested-by", default="sales_ingest_pipeline"
+    )
     args = parser.parse_args()
-    ingest(args.input_dir, args.output_dir, args.processed_log)
+    ingest(args.input_dir, args.output_dir, args.processed_log, args.ingested_by)
