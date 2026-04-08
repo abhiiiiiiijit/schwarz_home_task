@@ -41,11 +41,6 @@ python3 split.py data_1.csv.gz --shards 16 --output-dir shards/
 python3 cooccurrence.py --shard-dir shards/ --output cooccurrences.csv.gz
 ```
 
-**Low-memory testing** (simulate the memory constraint):
-
-```bash
-python3 -Xmx64m run_assignment1.py data_1.csv.gz
-```
 
 ### Why it computes the correct result
 
@@ -229,6 +224,19 @@ Parquet table before deduplication.
 - **Interoperability**: works with Hive, Trino, BigQuery, Redshift Spectrum,
   Delta Lake, Iceberg, and virtually every modern data platform.
 - **Compression**: Snappy by default (good speed/size balance).
+
+### Metadata Columns
+
+The ingestion pipeline adds several metadata columns to each record to improve **traceability, observability, and operational debugging**.
+
+- **`source_file`**  
+  Stores the full path of the file from which the record was read. This enables data lineage tracking and helps identify the exact file that produced a specific row in the dataset.
+
+- **`ingested_at`**  
+  Captures the timestamp when the record was processed by the ingestion pipeline. This provides visibility into ingestion timing and allows downstream processes to reason about data freshness.
+
+- **`ingested_by`**  
+  Identifies the pipeline, job, or system responsible for the ingestion. This is useful in environments with multiple ingestion processes or pipelines writing to the same dataset.
 
 ### Why Deduplication is Correct
 
