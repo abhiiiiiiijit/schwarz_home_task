@@ -2,7 +2,7 @@ import gzip
 import csv
 
 # Input the path to your .csv.gz file
-file_path = "/home/adminabhi/gitrepo/schwarz_home_task/assignment1/data_5.csv.gz"
+file_path = "/home/adminabhi/gitrepo/schwarz_home_task/assignment1/data_1.csv.gz"
 
 # Output CSV file path
 output_file = "input_data.csv"
