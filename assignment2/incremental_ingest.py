@@ -129,7 +129,8 @@ def ingest(input_dir: str, output_dir: str, processed_log: str) -> None:
 
     # 2. Load existing deduplicated data (if any)
     if os.path.exists(output_dir) and os.listdir(output_dir):
-        existing_df = spark.read.schema(SCHEMA).parquet(output_dir)
+        existing_df = spark.read.schema(SCHEMA).parquet(output_dir).cache()
+        existing_df.count()
     else:
         # Empty DataFrame with the same schema
         existing_df = spark.createDataFrame([], SCHEMA)

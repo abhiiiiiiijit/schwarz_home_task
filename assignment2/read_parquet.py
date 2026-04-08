@@ -6,7 +6,7 @@ spark = SparkSession.builder \
     .getOrCreate()
 
 # Path to folder containing parquet files
-path = "/home/adminabhi/gitrepo/schwarz_home_task/assignment2/warehouse/sales_dedup2/"
+path = "/home/adminabhi/gitrepo/schwarz_home_task/assignment2/warehouse/sales_dedup/"
 
 # Read parquet files
 df = spark.read.parquet(path)
@@ -15,4 +15,4 @@ df = spark.read.parquet(path)
 df.printSchema()
 
 # Display first rows
-df.show(20, truncate=False)
+df.show(28, truncate=False)
